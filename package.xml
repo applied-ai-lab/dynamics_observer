@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>dynamics_estimator</name>
+  <version>0.1.1</version>
+  <description>Estimator for the Dynamics of a chain robot e.g. a manipulator</description>
+  <maintainer email="mitch@robots.ox.ac.uk">Alexander Mitchell</maintainer>
+  <license>Proprietary</license>
+  <author email="mitch@robots.ox.ac.uk"> Alexander Mitchell</author>
+  <buildtool_depend>catkin</buildtool_depend>
+  <depend>eigen</depend>
+  <depend>pinocchio</depend>
+  <export>
+    <build_type>cmake</build_type>
+  </export>
+</package>

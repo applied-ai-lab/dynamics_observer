@@ -19,24 +19,61 @@ namespace dynamics_estimator
     class DynamicsObserver
     {
         public:
+            /**\fn DynamicsObserver
+             * \brief
+             *   Constructor that allocates all necessary structures
+             * 
+             * \param[in] robot_model
+             *   The robot model
+            */
             DynamicsObserver(std::shared_ptr<pinocchio::Model> robot_model);
 
+
+            /**\fn advanceKinematics
+             * \brief
+             *   Update the kinematic tree
+             * 
+             * \param[in] q
+             *   Joint state
+             * \param[in] qdot
+             *   Joint velocities
+            */
             void advanceKinematics(Eigen::VectorXd const& q,
                                    Eigen::VectorXd const& qdot);
 
-            /*
-            enum ReferenceFrame
-            {
-              WORLD = 0, 
-              LOCAL = 1, 
-              LOCAL_WORLD_ALIGNED = 2 
-            };
+
+            /**\fn computeFrameJacobian
+             * \brief
+             *   Compute jacobian for the named frame
+             * 
+             * \param[in] q
+             *   Joint state
+             * \param[in] qdot
+             *   Joint velocities
+             * \param[in] frame_name
+             *   Name of frame for the jacobian
+             * \param[in] reference_frame 
+             *    The reference frame for the velocity    
             */
-            Eigen::MatrixXd computeFrameJacbian(Eigen::VectorXd const& q,
+            Eigen::MatrixXd computeFrameJacobian(Eigen::VectorXd const& q,
                                                 Eigen::VectorXd const& qdot,
                                                 const std::string frame_name,
                                                 const pinocchio::ReferenceFrame reference_frame);
 
+
+            /**\fn computeFrameVelocity
+             * \brief
+             *   Computes classical velocity of frame 
+             * 
+             * \param[in] q
+             *   Joint state
+             * \param[in] qdot
+             *   Joint velocities
+             * \param[in] frame_name
+             *   Name of frame for the jacobian
+             * \param[in] reference_frame 
+             *    The reference frame for the velocity
+            */ 
             Eigen::Matrix<double, 6, 1> computeFrameVelocity(Eigen::VectorXd const& q,
                                                              Eigen::VectorXd const& qdot,
                                                              const std::string frame_name,
@@ -53,7 +90,7 @@ namespace dynamics_estimator
             Eigen::VectorXd qdot_;
             Eigen::VectorXd tau_;
 
-            // Fame velocity
+            // Frame velocity
             Eigen::Matrix<double, 6, 1> frameVel_;
 
             // Frame Jacobian

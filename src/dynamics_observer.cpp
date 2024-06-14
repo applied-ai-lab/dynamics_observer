@@ -24,10 +24,10 @@ namespace dynamics_estimator
         return;
     }
     
-    Eigen::MatrixXd DynamicsObserver::computeFrameJacbian(Eigen::VectorXd const& q,
-                                                          Eigen::VectorXd const& qdot,
-                                                          const std::string frame_name,
-                                                          const pinocchio::ReferenceFrame reference_frame)
+    Eigen::MatrixXd DynamicsObserver::computeFrameJacobian(Eigen::VectorXd const& q,
+                                                           Eigen::VectorXd const& qdot,
+                                                           const std::string frame_name,
+                                                           const pinocchio::ReferenceFrame reference_frame)
     {
         // Advance Kinematics
         advanceKinematics(q, qdot); 
@@ -47,11 +47,11 @@ namespace dynamics_estimator
     }
 
     Eigen::Matrix<double, 6, 1> DynamicsObserver::computeFrameVelocity(Eigen::VectorXd const& q,
-                                                             Eigen::VectorXd const& qdot,
-                                                             const std::string frame_name,
-                                                             const pinocchio::ReferenceFrame reference_frame)
+                                                                       Eigen::VectorXd const& qdot,
+                                                                       const std::string frame_name,
+                                                                       const pinocchio::ReferenceFrame reference_frame)
     {
-        J_ = computeFrameJacbian(q, qdot, frame_name, reference_frame);
+        J_ = computeFrameJacobian(q, qdot, frame_name, reference_frame);
         frameVel_.noalias() = J_ * qdot;
         return frameVel_;
     }

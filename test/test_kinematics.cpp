@@ -44,7 +44,7 @@ int main(int /* argc */, char ** /* argv */)
 
 
     // Get the Jacobian
-    J = observer.computeFrameJacbian(q, 
+    J = observer.computeFrameJacobian(q, 
                                  qdot, 
                                  "right_kinova_arm_joint_4",
                                  pinocchio::ReferenceFrame::WORLD);

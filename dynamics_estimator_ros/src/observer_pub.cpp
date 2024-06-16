@@ -26,13 +26,20 @@ namespace dynamics_estimator_ros
         {
             ROS_ERROR_STREAM("Failed to load Pinocchio model from robot description '" << robot_description << "'!");
         }
+        
+        // Load joint names
+        if (!nh_.getParam("joint_names", joint_names_))
+        {
+            ROS_ERROR_STREAM("Failed to load Joint Names!");    
+        }
+        
         // Get parameters for the frame addition
-        std::string frame_name_parameter {"/frame_name"};
+        frame_name_parameter_ = "frame_name";
         std::string frame_parent_parameter {"/parent_frame_name"};
 
-        if (!nh_.getParam("frame_name_parameter", frame_name_parameter)) 
+        if (!nh_.getParam("frame_name_parameter", frame_name_parameter_)) 
         {
-            ROS_WARN_STREAM("Failed getting frame name parameter, defaulting to '" << frame_name_parameter << "'!");
+            ROS_WARN_STREAM("Failed getting frame name parameter, defaulting to '" << frame_name_parameter_ << "'!");
         }
         if (!nh_.getParam("frame_parent_parameter", frame_parent_parameter)) 
         {
@@ -60,7 +67,7 @@ namespace dynamics_estimator_ros
         Eigen::Quaterniond orientation_offset(Eigen::Matrix3d::Identity());        
         if (!nh_.getParam("offset_oreintation", orientation_offset_lst))
         {
-            ROS_WARN_STREAM("Failed getting frame name parameter, defaulting to '" << frame_name_parameter << "'!");
+            ROS_WARN_STREAM("Failed getting frame name parameter, defaulting to '" << frame_name_parameter_ << "'!");
         }
         else
         {
@@ -75,19 +82,43 @@ namespace dynamics_estimator_ros
         // Create model utils 
         dynamics_estimator::ModelUtils model_utils;
         model_utils.addFrameToFrame(*robot_model, 
-                                     frame_name_parameter,
+                                     frame_name_parameter_,
                                      frame_parent_parameter,
                                      tar_offset,
                                      pinocchio::FrameType::OP_FRAME);
 
         // Check the new frame is there
-        if (!robot_model->existFrame(frame_name_parameter))
+        if (!robot_model->existFrame(frame_name_parameter_))
         {
             ROS_WARN_STREAM("New Frame failed to be added to robot model!!!");
         }
 
         // Create the observer
         dynamics_observer_ = std::make_unique<dynamics_estimator::DynamicsObserver>(robot_model);
+
+        // Set vector sizes
+        q_.setZero(dynamics_observer_->getNq());
+        qdot_.setZero(dynamics_observer_->getNv());
+        tau_.setZero(dynamics_observer_->getNv());
+
+        // Create subscriber
+        std::string joint_state_topic;
+        if (!nh_.getParam("joint_states_topic", joint_state_topic))
+        {
+            ROS_WARN_STREAM("Could not read Joint State Topic from param server");
+        }
+
+        // Ros wait for msg
+        const sensor_msgs::JointState::ConstPtr msg = ros::topic::waitForMessage<sensor_msgs::JointState>(joint_state_topic, nh_, ros::Duration(5.0));
+        createMapFromJointStateMsg(msg);
+
+        // Create publisher
+        frameTwistPub_ = nh_.advertise<geometry_msgs::TwistStamped>("frame_twist", 1);
+        frameTwistStamped_.header.stamp = ros::Time::now();
+        frameTwistStamped_.header.frame_id = "base_link";
+
+        nh_.subscribe(joint_state_topic, 1, &ObserverPub::jointStateCallback, this, ros::TransportHints().tcpNoDelay());
+
     }
 
     void ObserverPub::resetContainers()
@@ -96,6 +127,54 @@ namespace dynamics_estimator_ros
         frameQuat_.setIdentity();
 
         frameVel_.setZero();
+    }
+
+    void ObserverPub::createMapFromJointStateMsg(const sensor_msgs::JointState::ConstPtr &msg)
+    {
+        // Get joint names and positions from the JointState message
+        std::vector<std::string> msg_names = msg->name;
+        // Get the index of each joint and store in a map
+        for (size_t i = 0; i < joint_names_.size(); ++i)
+        {
+            auto it = std::find(msg_names.begin(), msg_names.end(), joint_names_[i]);
+            if (it != msg_names.end()) 
+            {
+                joint_index_map_[joint_names_[i]] = std::distance(joint_names_.begin(), it);
+            }
+            else
+            {
+                ROS_WARN_STREAM("Could not find the joint name in the joint state topic!");
+            }
+        }
+    }
+
+    void ObserverPub::jointStateCallback(const sensor_msgs::JointState::ConstPtr &msg)
+    {
+        for (size_t i = 0; i < joint_names_.size(); ++i)
+        {
+            q_(i)    = msg->position[joint_index_map_[joint_names_[i]]];
+            qdot_(i) = msg->velocity[joint_index_map_[joint_names_[i]]];
+            tau_(i)  = msg->effort[joint_index_map_[joint_names_[i]]];
+        }
+        // Update the frame vel
+        frameVel_ = dynamics_observer_->computeFrameVelocity(q_, 
+                                                             qdot_,
+                                                             frame_name_parameter_,
+                                                             pinocchio::ReferenceFrame::WORLD);
+        publishFrameTwist();
+    }
+
+    void ObserverPub::publishFrameTwist()
+    {
+        frameTwistStamped_.header.stamp = ros::Time::now();
+        frameTwistStamped_.twist.linear.x = frameVel_[0];
+        frameTwistStamped_.twist.linear.y = frameVel_[1];
+        frameTwistStamped_.twist.linear.z = frameVel_[2];
+        frameTwistStamped_.twist.angular.x = frameVel_[3];
+        frameTwistStamped_.twist.angular.y = frameVel_[4];
+        frameTwistStamped_.twist.angular.z = frameVel_[5];
+
+        frameTwistPub_.publish(frameTwistStamped_);
     }
 
     

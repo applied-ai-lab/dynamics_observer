@@ -79,6 +79,10 @@ namespace dynamics_estimator
                                                              const std::string frame_name,
                                                              const pinocchio::ReferenceFrame reference_frame);
 
+            // Get vector sizes
+            const int getNq() { return robot_model_->nq; }
+            const int getNv() { return robot_model_->nv; }
+            
             std::shared_ptr<pinocchio::Model> const& getRobotModel() { return robot_model_; }
             std::shared_ptr<pinocchio::Data>  const& getData() { return data_; }    
 

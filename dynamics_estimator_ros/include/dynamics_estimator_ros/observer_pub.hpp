@@ -21,7 +21,7 @@ namespace dynamics_estimator_ros
     class ObserverPub
     {
         public:
-            ObserverPub();
+            ObserverPub(ros::NodeHandle& nh);
 
             void resetContainers();
 
@@ -34,7 +34,7 @@ namespace dynamics_estimator_ros
         private:
 
             // Ros related things
-            ros::NodeHandle nh_;
+            // ros::NodeHandle nh_;
 
             // Joint state subscriber
             ros::Subscriber jointStateSub_;

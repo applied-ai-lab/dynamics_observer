@@ -4,7 +4,7 @@ joints: [$(arg namespace)joint_1, $(arg namespace)joint_2, $(arg namespace)joint
          $(arg namespace)joint_7]
 frame_name: "target_frame"
 parent_frame_name: "tool_frame"
-joint_states_topic: "/my_gen3/joint_states"
+joint_states_topic: "my_gen3/joint_states"
 offset_position: [0., 0., 0.]
 # Quaternion w x y z  
 offset_orientation: [1., 0., 0., 0.]

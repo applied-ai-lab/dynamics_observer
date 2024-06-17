@@ -7,8 +7,9 @@ int main(int argc, char* argv[])
 {       
     ros::init(argc, argv, "twist_node");
 
+    ros::NodeHandle nh;
     // Create node
-    dynamics_estimator_ros::ObserverPub();
+    dynamics_estimator_ros::ObserverPub pub(nh);
 
     ros::spin();
 

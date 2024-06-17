@@ -12,7 +12,7 @@ find_package(pinocchio REQUIRED)
 include_directories(include ${EIGEN3_INCLUDE_DIRS})
 
 # Define library
-add_library(${PROJECT_NAME}
+add_library(${PROJECT_NAME} SHARED
             src/dynamics_observer.cpp
             src/model_utils.cpp
             )

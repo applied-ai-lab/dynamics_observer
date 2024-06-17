@@ -28,7 +28,7 @@ namespace dynamics_estimator_ros
         }
         
         // Load joint names
-        if (!nh_.getParam("joint_names", joint_names_))
+        if (!nh_.getParam("joints", joint_names_))
         {
             ROS_ERROR_STREAM("Failed to load Joint Names!");    
         }
@@ -37,11 +37,11 @@ namespace dynamics_estimator_ros
         frame_name_parameter_ = "frame_name";
         std::string frame_parent_parameter {"/parent_frame_name"};
 
-        if (!nh_.getParam("frame_name_parameter", frame_name_parameter_)) 
+        if (!nh_.getParam("frame_name", frame_name_parameter_)) 
         {
             ROS_WARN_STREAM("Failed getting frame name parameter, defaulting to '" << frame_name_parameter_ << "'!");
         }
-        if (!nh_.getParam("frame_parent_parameter", frame_parent_parameter)) 
+        if (!nh_.getParam("parent_frame_name", frame_parent_parameter)) 
         {
             ROS_WARN_STREAM("Failed getting frame parent parameter, defaulting to '" << frame_parent_parameter << "'!");
         }
@@ -65,7 +65,7 @@ namespace dynamics_estimator_ros
         // Load the orientation offset quaternion
         std::vector<double> orientation_offset_lst;
         Eigen::Quaterniond orientation_offset(Eigen::Matrix3d::Identity());        
-        if (!nh_.getParam("offset_oreintation", orientation_offset_lst))
+        if (!nh_.getParam("offset_orientation", orientation_offset_lst))
         {
             ROS_WARN_STREAM("Failed getting frame name parameter, defaulting to '" << frame_name_parameter_ << "'!");
         }
@@ -111,6 +111,8 @@ namespace dynamics_estimator_ros
         // Ros wait for msg
         const sensor_msgs::JointState::ConstPtr msg = ros::topic::waitForMessage<sensor_msgs::JointState>(joint_state_topic, nh_, ros::Duration(5.0));
         createMapFromJointStateMsg(msg);
+
+        ROS_INFO_STREAM("Joint State Msg received");
 
         // Create publisher
         frameTwistPub_ = nh_.advertise<geometry_msgs::TwistStamped>("frame_twist", 1);

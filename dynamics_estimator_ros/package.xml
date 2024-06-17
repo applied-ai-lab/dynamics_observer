@@ -8,6 +8,8 @@
   <author email="mitch@robots.ox.ac.uk"> Alexander Mitchell</author>
   <buildtool_depend>catkin</buildtool_depend>
   <depend>roscpp</depend>
+  <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
   <depend>eigen</depend>
   <depend>pinocchio</depend>
   <depend>dynamics_estimator</depend>

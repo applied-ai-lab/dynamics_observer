@@ -34,7 +34,7 @@ namespace dynamics_estimator_ros
         private:
 
             // Ros related things
-            // ros::NodeHandle nh_;
+            ros::NodeHandle nh_;
 
             // Joint state subscriber
             ros::Subscriber jointStateSub_;
@@ -58,7 +58,7 @@ namespace dynamics_estimator_ros
             std::string frame_name_parameter_;
             
             // Message indexing map
-            std::unordered_map<std::string, size_t> joint_index_map_;
+            std::unordered_map<std::string, int> joint_index_map_;
 
             // Frame velocity msgs
             geometry_msgs::TwistStamped frameTwistStamped_;

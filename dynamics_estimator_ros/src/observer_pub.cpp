@@ -3,19 +3,19 @@
 
 namespace dynamics_estimator_ros
 {
-    ObserverPub::ObserverPub(ros::NodeHandle& nh) // : nh_{}
+    ObserverPub::ObserverPub(ros::NodeHandle& nh) : nh_{nh}
     {
         // Reset the containers
         resetContainers();
         
         // Get the robot description 
         std::string robot_description_parameter {"/robot_description"};
-        if (!nh.getParam("robot_description_parameter", robot_description_parameter)) 
+        if (!nh_.getParam("robot_description_parameter", robot_description_parameter)) 
         {
             ROS_WARN_STREAM("Failed getting robot description parameter, defaulting to '" << robot_description_parameter << "'!");
         }
         std::string robot_description {};
-        if (!nh.getParam(robot_description_parameter, robot_description)) 
+        if (!nh_.getParam(robot_description_parameter, robot_description)) 
         {
             ROS_ERROR_STREAM("Failed getting robot description from '" << robot_description_parameter << "'!");
         }
@@ -28,7 +28,7 @@ namespace dynamics_estimator_ros
         }
         
         // Load joint names
-        if (!nh.getParam("joints", joint_names_))
+        if (!nh_.getParam("joints", joint_names_))
         {
             ROS_ERROR_STREAM("Failed to load Joint Names!");    
         }
@@ -37,11 +37,11 @@ namespace dynamics_estimator_ros
         frame_name_parameter_ = "frame_name";
         std::string frame_parent_parameter {"/parent_frame_name"};
 
-        if (!nh.getParam("frame_name", frame_name_parameter_)) 
+        if (!nh_.getParam("frame_name", frame_name_parameter_)) 
         {
             ROS_WARN_STREAM("Failed getting frame name parameter, defaulting to '" << frame_name_parameter_ << "'!");
         }
-        if (!nh.getParam("parent_frame_name", frame_parent_parameter)) 
+        if (!nh_.getParam("parent_frame_name", frame_parent_parameter)) 
         {
             ROS_WARN_STREAM("Failed getting frame parent parameter, defaulting to '" << frame_parent_parameter << "'!");
         }
@@ -50,7 +50,7 @@ namespace dynamics_estimator_ros
         std::vector<double> position_offset_lst;
         Eigen::Vector3d position_offset;
         position_offset.setZero();
-        if (!nh.getParam("offset_position", position_offset_lst))
+        if (!nh_.getParam("offset_position", position_offset_lst))
         {
             ROS_WARN_STREAM("Failed getting offset position, defaulting to '" << position_offset.transpose() << "'!");
             position_offset.setZero();
@@ -65,7 +65,7 @@ namespace dynamics_estimator_ros
         // Load the orientation offset quaternion
         std::vector<double> orientation_offset_lst;
         Eigen::Quaterniond orientation_offset(Eigen::Matrix3d::Identity());        
-        if (!nh.getParam("offset_orientation", orientation_offset_lst))
+        if (!nh_.getParam("offset_orientation", orientation_offset_lst))
         {
             ROS_WARN_STREAM("Failed getting frame name parameter, defaulting to '" << frame_name_parameter_ << "'!");
         }
@@ -103,23 +103,23 @@ namespace dynamics_estimator_ros
 
         // Create subscriber
         std::string joint_state_topic;
-        if (!nh.getParam("joint_states_topic", joint_state_topic))
+        if (!nh_.getParam("joint_states_topic", joint_state_topic))
         {
             ROS_WARN_STREAM("Could not read Joint State Topic from param server");
         }
 
         // Ros wait for msg
-        const sensor_msgs::JointState::ConstPtr msg = ros::topic::waitForMessage<sensor_msgs::JointState>(joint_state_topic, nh, ros::Duration(5.0));
+        const sensor_msgs::JointState::ConstPtr msg = ros::topic::waitForMessage<sensor_msgs::JointState>(joint_state_topic, nh_, ros::Duration(5.0));
         createMapFromJointStateMsg(msg);
 
         ROS_INFO_STREAM("Joint State Msg received");
 
         // Create publisher
-        frameTwistPub_ = nh.advertise<geometry_msgs::TwistStamped>("frame_twist", 1);
+        frameTwistPub_ = nh_.advertise<geometry_msgs::TwistStamped>("frame_twist", 1);
         frameTwistStamped_.header.stamp = ros::Time::now();
         frameTwistStamped_.header.frame_id = "base_link";
 
-        nh.subscribe(joint_state_topic, 1, &ObserverPub::jointStateCallback, this, ros::TransportHints().tcpNoDelay());
+        jointStateSub_ = nh_.subscribe(joint_state_topic, 1, &ObserverPub::jointStateCallback, this, ros::TransportHints().tcpNoDelay());
 
     }
 
@@ -141,7 +141,8 @@ namespace dynamics_estimator_ros
             auto it = std::find(msg_names.begin(), msg_names.end(), joint_names_[i]);
             if (it != msg_names.end()) 
             {
-                joint_index_map_[joint_names_[i]] = std::distance(joint_names_.begin(), it);
+                joint_index_map_[joint_names_[i]] = std::distance(msg_names.begin(), it);
+                std::cout << joint_names_[i] << " " << joint_index_map_[joint_names_[i]] << std::endl;
             }
             else
             {

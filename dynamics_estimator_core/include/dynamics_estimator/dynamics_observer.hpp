@@ -15,7 +15,7 @@
 #include <Eigen/Eigen>
 
 namespace dynamics_estimator
-{
+{ 
     class DynamicsObserver
     {
         public:
@@ -79,6 +79,11 @@ namespace dynamics_estimator
                                                              const std::string frame_name,
                                                              const pinocchio::ReferenceFrame reference_frame);
 
+            pinocchio::SE3 findFramePose(Eigen::VectorXd const& q,
+                                         Eigen::VectorXd const& qdot,
+                                         const std::string frame_name);
+            
+
             // Get vector sizes
             const int getNq() { return robot_model_->nq; }
             const int getNv() { return robot_model_->nv; }
@@ -93,6 +98,9 @@ namespace dynamics_estimator
             Eigen::VectorXd q_;            
             Eigen::VectorXd qdot_;
             Eigen::VectorXd tau_;
+
+            // Pose of the frame
+            pinocchio::SE3 framePose_;
 
             // Frame velocity
             Eigen::Matrix<double, 6, 1> frameVel_;

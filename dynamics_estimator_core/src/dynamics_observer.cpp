@@ -9,6 +9,10 @@ namespace dynamics_estimator
         qdot_.setZero(robot_model_->nv);
         tau_.setZero(robot_model_->nv);
 
+        // Init Pose
+        framePose_.translation(Eigen::Vector3d::Zero());
+        framePose_.rotation(Eigen::Matrix3d::Identity());
+
         // Frame velocity hence 6 units
         frameVel_.setZero();
         J_.setZero(6, robot_model_->nv);
@@ -54,6 +58,17 @@ namespace dynamics_estimator
         J_ = computeFrameJacobian(q, qdot, frame_name, reference_frame);
         frameVel_.noalias() = J_ * qdot;
         return frameVel_;
+    }
+
+    pinocchio::SE3 DynamicsObserver::findFramePose(Eigen::VectorXd const& q,
+                                                   Eigen::VectorXd const& qdot,
+                                                   const std::string frame_name)
+    {
+        // Advance Kinematics
+        advanceKinematics(q, qdot);
+
+        framePose_ = data_->oMf[robot_model_->getFrameId(frame_name)];
+        return framePose_;
     }
 
 } //namespace dynamics_estimator

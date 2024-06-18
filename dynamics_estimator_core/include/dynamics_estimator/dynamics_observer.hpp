@@ -81,7 +81,10 @@ namespace dynamics_estimator
 
             pinocchio::SE3 findFramePose(Eigen::VectorXd const& q,
                                          Eigen::VectorXd const& qdot,
+                                         const std::string odom_name,
                                          const std::string frame_name);
+
+            bool existFrame(const std::string frame_name);
             
 
             // Get vector sizes

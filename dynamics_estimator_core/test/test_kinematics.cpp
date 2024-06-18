@@ -18,8 +18,18 @@ int main(int /* argc */, char ** /* argv */)
     auto robot_model = std::make_shared<pinocchio::Model>();
     pinocchio::urdf::buildModel(urdf_path, *robot_model.get());
 
+    // Create random joint configuration
+    Eigen::VectorXd q = 0.0 * Eigen::VectorXd::Ones(robot_model->nq);
+    Eigen::VectorXd qdot = 0.5 * Eigen::VectorXd::Ones(robot_model->nv);
+    Eigen::VectorXd xdot(6);
+
+    {
+        auto data = pinocchio::Data(*robot_model.get()); 
+        pinocchio::forwardKinematics(*robot_model.get(), data, q);
+    }     
+
     // Add frame to the model 
-    dynamics_estimator::ModelUtils model_utils;
+    dynamics_estimator::ModelUtils model_utils {};
     const pinocchio::SE3 tarOffset(Eigen::Matrix3d::Identity(), Eigen::Vector3d(0., 0., 0.08));
     auto target_id = model_utils.addFrameToFrame(*robot_model.get(),
                                                  "right_target",
@@ -30,17 +40,20 @@ int main(int /* argc */, char ** /* argv */)
     std::cout << robot_model->existFrame("right_target") << std::endl;
     std::cout << robot_model->getFrameId("right_target") << std::endl;
 
+    auto data = pinocchio::Data(*robot_model.get()); 
+
+    // Get transformation from parent to target
+    auto parent_to_target = data.oMf[robot_model->getFrameId("right_kinova_arm_tool_frame")].inverse() * data.oMf[robot_model->getFrameId("right_target")];
+    
+    std::cout << "Transform parent to target" << std::endl;
+    std::cout << parent_to_target.toHomogeneousMatrix() << std::endl;
+
     // Observer
     dynamics_estimator::DynamicsObserver observer(robot_model);
     
 
     Eigen::MatrixXd J(6, robot_model->nv);
     J.setZero(); 
-
-    // Create random joint configuration
-    Eigen::VectorXd q = 0.0 * Eigen::VectorXd::Ones(robot_model->nq);
-    Eigen::VectorXd qdot = 0.5 * Eigen::VectorXd::Ones(robot_model->nv);
-    Eigen::VectorXd xdot(6);
 
 
     // Get the Jacobian

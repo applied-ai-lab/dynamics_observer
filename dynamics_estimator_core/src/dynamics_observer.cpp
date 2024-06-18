@@ -24,7 +24,8 @@ namespace dynamics_estimator
         q_ = q;
         qdot_ = qdot;
 
-        pinocchio::forwardKinematics(*robot_model_.get(), *data_.get(), q_, qdot_);        
+        pinocchio::forwardKinematics(*robot_model_.get(), *data_.get(), q_, qdot_);
+        pinocchio::updateFramePlacements(*robot_model_.get(), *data_.get());        
         return;
     }
     
@@ -62,13 +63,19 @@ namespace dynamics_estimator
 
     pinocchio::SE3 DynamicsObserver::findFramePose(Eigen::VectorXd const& q,
                                                    Eigen::VectorXd const& qdot,
+                                                   const std::string odom_name,
                                                    const std::string frame_name)
     {
         // Advance Kinematics
         advanceKinematics(q, qdot);
 
-        framePose_ = data_->oMf[robot_model_->getFrameId(frame_name)];
+        framePose_ = data_->oMf[robot_model_->getFrameId(odom_name)].inverse() * data_->oMf[robot_model_->getFrameId(frame_name)];
         return framePose_;
+    }
+
+    bool DynamicsObserver::existFrame(const std::string frame_name)
+    {
+        return robot_model_->existFrame(frame_name);
     }
 
 } //namespace dynamics_estimator

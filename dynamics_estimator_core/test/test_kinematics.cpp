@@ -12,7 +12,7 @@ int main(int /* argc */, char ** /* argv */)
 {
 
     // Filename
-    std::string urdf_path = PATH_TO_DIR + std::string("/test/resources/oxf20_right_arm.urdf");
+    std::string urdf_path = PATH_TO_DIR + std::string("/test/resources/oxf20_left_arm.urdf");
     std::cout << "Path to URDF: " << urdf_path << std::endl;
 
     auto robot_model = std::make_shared<pinocchio::Model>();
@@ -32,18 +32,18 @@ int main(int /* argc */, char ** /* argv */)
     dynamics_estimator::ModelUtils model_utils {};
     const pinocchio::SE3 tarOffset(Eigen::Matrix3d::Identity(), Eigen::Vector3d(0., 0., 0.08));
     auto target_id = model_utils.addFrameToFrame(*robot_model.get(),
-                                                 "right_target",
-                                                 "right_kinova_arm_tool_frame",
+                                                 "left_target",
+                                                 "left_kinova_arm_tool_frame",
                                                  tarOffset);
 
     // Check that the new frame exists
-    std::cout << robot_model->existFrame("right_target") << std::endl;
-    std::cout << robot_model->getFrameId("right_target") << std::endl;
+    std::cout << robot_model->existFrame("left_target") << std::endl;
+    std::cout << robot_model->getFrameId("left_target") << std::endl;
 
     auto data = pinocchio::Data(*robot_model.get()); 
 
     // Get transformation from parent to target
-    auto parent_to_target = data.oMf[robot_model->getFrameId("right_kinova_arm_tool_frame")].inverse() * data.oMf[robot_model->getFrameId("right_target")];
+    auto parent_to_target = data.oMf[robot_model->getFrameId("left_kinova_arm_tool_frame")].inverse() * data.oMf[robot_model->getFrameId("left_target")];
     
     std::cout << "Transform parent to target" << std::endl;
     std::cout << parent_to_target.toHomogeneousMatrix() << std::endl;
@@ -59,7 +59,7 @@ int main(int /* argc */, char ** /* argv */)
     // Get the Jacobian
     J = observer.computeFrameJacobian(q, 
                                  qdot, 
-                                 "right_kinova_arm_joint_4",
+                                 "left_kinova_arm_joint_4",
                                  pinocchio::ReferenceFrame::WORLD);
 
     std::cout << J << std::endl;
@@ -69,7 +69,7 @@ int main(int /* argc */, char ** /* argv */)
     // Use get frame vel
     auto xdot_vel = observer.computeFrameVelocity(q, 
                                               qdot, 
-                                              "right_kinova_arm_joint_4",
+                                              "left_kinova_arm_joint_4",
                                               pinocchio::ReferenceFrame::WORLD);
 
     std::cout << " ===== X DOT ======" << std::endl;

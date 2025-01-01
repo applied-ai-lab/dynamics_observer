@@ -1,4 +1,5 @@
 #include "dynamics_estimator/dynamics_observer.hpp"
+#include "dynamics_estimator/utils.hpp"
 
 namespace dynamics_estimator
 {
@@ -21,7 +22,8 @@ namespace dynamics_estimator
     void DynamicsObserver::advanceKinematics(Eigen::VectorXd const& q,
                                              Eigen::VectorXd const& qdot)
     {
-        q_ = q;
+        // Reorientate joints        
+        q_ = joint_ros_to_pinocchio(q, *robot_model_);
         qdot_ = qdot;
 
         pinocchio::forwardKinematics(*robot_model_.get(), *data_.get(), q_, qdot_);
@@ -56,6 +58,9 @@ namespace dynamics_estimator
                                                                        const std::string frame_name,
                                                                        const pinocchio::ReferenceFrame reference_frame)
     {
+        // Advance Kinematics
+        advanceKinematics(q, qdot); 
+
         J_ = computeFrameJacobian(q, qdot, frame_name, reference_frame);
         frameVel_.noalias() = J_ * qdot;
         return frameVel_;

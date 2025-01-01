@@ -15,6 +15,7 @@ include_directories(include ${EIGEN3_INCLUDE_DIRS})
 add_library(${PROJECT_NAME} SHARED
             src/dynamics_observer.cpp
             src/model_utils.cpp
+            src/utils.cpp
             )
 
 target_include_directories(${PROJECT_NAME} PUBLIC

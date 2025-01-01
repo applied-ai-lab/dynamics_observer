@@ -13,6 +13,7 @@
 
 #include <ros/ros.h>
 #include <sensor_msgs/JointState.h>
+#include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TwistStamped.h>
 
 
@@ -27,7 +28,7 @@ namespace dynamics_estimator_ros
 
             void jointStateCallback(const sensor_msgs::JointState::ConstPtr &msg);
 
-            void publishFrameTwist();
+            void publish();
 
             void createMapFromJointStateMsg(const sensor_msgs::JointState::ConstPtr &msg);
 
@@ -36,11 +37,16 @@ namespace dynamics_estimator_ros
             // Ros related things
             ros::NodeHandle nh_;
 
+            // Ros time
+            ros::Time time_;
+
             // Joint state subscriber
             ros::Subscriber jointStateSub_;
             
-            // Twist publisher
+            // Publisher
+            ros::Publisher framePosePub_;
             ros::Publisher frameTwistPub_;
+            ros::Publisher jointStatePub_;
 
             // Dynamics estimator   
             std::unique_ptr<dynamics_estimator::DynamicsObserver> dynamics_observer_;
@@ -51,17 +57,23 @@ namespace dynamics_estimator_ros
             Eigen::Vector3d framePosition_;
             Eigen::Quaterniond frameQuat_;
 
+            pinocchio::SE3 framePose_;
             Eigen::Matrix<double, 6, 1> frameVel_;
 
             // Joint names
             std::vector<std::string> joint_names_;
             std::string frame_name_parameter_;
+            std::string odom_frame_name_;
             
             // Message indexing map
             std::unordered_map<std::string, int> joint_index_map_;
 
+            // Frame Pose msgs
+            geometry_msgs::PoseStamped framePoseStamped_;
             // Frame velocity msgs
             geometry_msgs::TwistStamped frameTwistStamped_;
+            // Joint State mgs
+            sensor_msgs::JointState frameJointMsgs_;
     };
 
 } //dynamics_estimator_ros

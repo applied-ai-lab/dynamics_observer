@@ -14,6 +14,10 @@ namespace dynamics_estimator_ros
         {
             ROS_WARN_STREAM("Failed getting robot description parameter, defaulting to '" << robot_description_parameter << "'!");
         }
+        else
+        {
+            ROS_INFO_STREAM("==== ROBOT DESCRIPTION PARAMETER:  " << robot_description_parameter);
+        }
         std::string robot_description {};
         if (!nh_.getParam(robot_description_parameter, robot_description)) 
         {
@@ -34,18 +38,34 @@ namespace dynamics_estimator_ros
         }
         
         // Get parameters for the frame addition
+        odom_frame_name_ = {"world"};
         frame_name_parameter_ = "frame_name";
         std::string frame_parent_parameter {"/parent_frame_name"};
 
+        if (!nh_.getParam("odom_frame", odom_frame_name_)) 
+        {
+            ROS_WARN_STREAM("Failed getting odom frame name, defaulting to '" << odom_frame_name_ << "'!");
+        }
+        else
+        {
+            ROS_INFO_STREAM("==== ODOM FRAME NAME:  " << odom_frame_name_);
+        }
         if (!nh_.getParam("frame_name", frame_name_parameter_)) 
         {
             ROS_WARN_STREAM("Failed getting frame name parameter, defaulting to '" << frame_name_parameter_ << "'!");
+        }
+        else
+        {
+            ROS_INFO_STREAM("==== TARGET FRAME NAME:  " << frame_name_parameter_);
         }
         if (!nh_.getParam("parent_frame_name", frame_parent_parameter)) 
         {
             ROS_WARN_STREAM("Failed getting frame parent parameter, defaulting to '" << frame_parent_parameter << "'!");
         }
-
+        else
+        {
+            ROS_INFO_STREAM("==== PARENT FRAME NAME:  " << frame_parent_parameter);
+        }
         // Load the position offset
         std::vector<double> position_offset_lst;
         Eigen::Vector3d position_offset;
@@ -67,7 +87,10 @@ namespace dynamics_estimator_ros
         Eigen::Quaterniond orientation_offset(Eigen::Matrix3d::Identity());        
         if (!nh_.getParam("offset_orientation", orientation_offset_lst))
         {
-            ROS_WARN_STREAM("Failed getting frame name parameter, defaulting to '" << frame_name_parameter_ << "'!");
+            ROS_WARN_STREAM("Failed getting offset orientation, defaulting to '" << orientation_offset.w() << 
+                                                                                    orientation_offset.x() << 
+                                                                                    orientation_offset.y() << 
+                                                                                    orientation_offset.z() << "'!");
         }
         else
         {
@@ -80,7 +103,7 @@ namespace dynamics_estimator_ros
         pinocchio::SE3 tar_offset(orientation_offset.normalized().toRotationMatrix(), position_offset);
 
         // Create model utils 
-        dynamics_estimator::ModelUtils model_utils;
+        dynamics_estimator::ModelUtils model_utils {};
         model_utils.addFrameToFrame(*robot_model, 
                                      frame_name_parameter_,
                                      frame_parent_parameter,
@@ -115,11 +138,33 @@ namespace dynamics_estimator_ros
         ROS_INFO_STREAM("Joint State Msg received");
 
         // Create publisher
+        framePosePub_ = nh_.advertise<geometry_msgs::PoseStamped>("frame_pose", 1);
+        framePoseStamped_.header.stamp = ros::Time::now();
+        framePoseStamped_.header.frame_id = "base_link";
+
         frameTwistPub_ = nh_.advertise<geometry_msgs::TwistStamped>("frame_twist", 1);
         frameTwistStamped_.header.stamp = ros::Time::now();
         frameTwistStamped_.header.frame_id = "base_link";
 
+        jointStatePub_ = nh_.advertise<sensor_msgs::JointState>("frame_joint_states", 1);
+        frameJointMsgs_.header.stamp = ros::Time::now();
+        frameJointMsgs_.name = joint_names_;
+
+        frameJointMsgs_.position.resize(joint_names_.size(), 0.0);
+        frameJointMsgs_.velocity.resize(joint_names_.size(), 0.0);
+        frameJointMsgs_.effort.resize(joint_names_.size(), 0.0);
+
         jointStateSub_ = nh_.subscribe(joint_state_topic, 1, &ObserverPub::jointStateCallback, this, ros::TransportHints().tcpNoDelay());
+
+        // Get the world name
+        pinocchio::FrameIndex world_frame_index = 0;
+        auto frames = robot_model->frames;
+
+        ROS_INFO_STREAM("==== FRAME NAMES ====");
+        for (size_t i=0; i<frames.size(); ++i)
+        {
+            ROS_INFO_STREAM(frames[i].name);
+        }
 
     }
 
@@ -159,17 +204,56 @@ namespace dynamics_estimator_ros
             qdot_(i) = msg->velocity[joint_index_map_[joint_names_[i]]];
             tau_(i)  = msg->effort[joint_index_map_[joint_names_[i]]];
         }
+        
+        // Check frame still exists
+        if (!dynamics_observer_->existFrame(frame_name_parameter_))
+        {
+            ROS_WARN_STREAM(" TARGET FRAME DOES NOT EXIST: " << frame_name_parameter_);
+        }
+        
+        // Update the frame pose
+        framePose_ = dynamics_observer_->findFramePose(q_,
+                                                       qdot_,
+                                                       odom_frame_name_,
+                                                       frame_name_parameter_);
+        
         // Update the frame vel
         frameVel_ = dynamics_observer_->computeFrameVelocity(q_, 
                                                              qdot_,
                                                              frame_name_parameter_,
                                                              pinocchio::ReferenceFrame::WORLD);
-        publishFrameTwist();
+        publish();
     }
 
-    void ObserverPub::publishFrameTwist()
+    void ObserverPub::publish()
     {
-        frameTwistStamped_.header.stamp = ros::Time::now();
+        time_ = ros::Time::now();
+
+        frameJointMsgs_.header.stamp = time_;
+        for (size_t i=0; i<joint_names_.size(); ++i)
+        {
+            frameJointMsgs_.position[i] = q_(i);
+            frameJointMsgs_.velocity[i] = qdot_(i);
+            // frameJointMsgs_.effort[i] = tau_(i);
+        }
+        
+        framePoseStamped_.header.stamp = time_;
+
+        framePosition_ = framePose_.translation();
+        frameQuat_ = Eigen::Quaterniond(framePose_.rotation());
+
+
+        framePoseStamped_.pose.position.x = framePosition_(0);
+        framePoseStamped_.pose.position.y = framePosition_(1);
+        framePoseStamped_.pose.position.z = framePosition_(2);
+
+        framePoseStamped_.pose.orientation.w = frameQuat_.w();
+        framePoseStamped_.pose.orientation.x = frameQuat_.x();
+        framePoseStamped_.pose.orientation.y = frameQuat_.y();
+        framePoseStamped_.pose.orientation.z = frameQuat_.z();
+
+
+        frameTwistStamped_.header.stamp = time_;
         frameTwistStamped_.twist.linear.x = frameVel_[0];
         frameTwistStamped_.twist.linear.y = frameVel_[1];
         frameTwistStamped_.twist.linear.z = frameVel_[2];
@@ -177,7 +261,9 @@ namespace dynamics_estimator_ros
         frameTwistStamped_.twist.angular.y = frameVel_[4];
         frameTwistStamped_.twist.angular.z = frameVel_[5];
 
+        framePosePub_.publish(framePoseStamped_);
         frameTwistPub_.publish(frameTwistStamped_);
+        jointStatePub_.publish(frameJointMsgs_);
     }
 
     

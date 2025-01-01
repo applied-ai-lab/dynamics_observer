@@ -19,6 +19,16 @@
 
 namespace dynamics_estimator_ros
 {
+    const std::vector<std::string> forceStateNames = {
+            "linear_x",
+            "linear_y",
+            "linear_z",
+            "rotational_x",
+            "rotational_y",
+            "rotational_z"
+    };
+    
+    
     class ObserverPub
     {
         public:
@@ -47,12 +57,15 @@ namespace dynamics_estimator_ros
             ros::Publisher framePosePub_;
             ros::Publisher frameTwistPub_;
             ros::Publisher jointStatePub_;
+            ros::Publisher forceStatePub_;
 
             // Dynamics estimator   
             std::unique_ptr<dynamics_estimator::DynamicsObserver> dynamics_observer_;
 
             // Containers
             Eigen::VectorXd q_, qdot_, tau_; 
+
+            Eigen::Matrix<double, 6, 1> force_;
 
             Eigen::Vector3d framePosition_;
             Eigen::Quaterniond frameQuat_;
@@ -74,6 +87,9 @@ namespace dynamics_estimator_ros
             geometry_msgs::TwistStamped frameTwistStamped_;
             // Joint State mgs
             sensor_msgs::JointState frameJointMsgs_;
+
+            // Force in the joint states
+            sensor_msgs::JointState eeForceMsgs_;
     };
 
 } //dynamics_estimator_ros

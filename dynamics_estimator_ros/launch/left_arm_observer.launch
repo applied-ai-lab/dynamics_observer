@@ -1,0 +1,12 @@
+<launch>
+
+  <arg name="robot_description_parameter" default="/robot_description"/>
+  <arg name="namespace" default="left_kinova_arm_"/>
+
+  <!-- Load controller configuration -->
+  <rosparam file="$(find dynamics_estimator_ros)/config/dynamics_estimator.yaml" command="load" subst_value="true"/>
+
+  <node name="observer" pkg="dynamics_estimator_ros" type="dynamics_estimator_ros_twist_node" respawn="false" output="screen" />
+
+
+</launch>

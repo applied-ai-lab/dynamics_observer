@@ -123,6 +123,7 @@ namespace dynamics_estimator_ros
         q_.setZero(dynamics_observer_->getNq());
         qdot_.setZero(dynamics_observer_->getNv());
         tau_.setZero(dynamics_observer_->getNv());
+        force_.setZero();
 
         // Create subscriber
         std::string joint_state_topic;
@@ -154,6 +155,14 @@ namespace dynamics_estimator_ros
         frameJointMsgs_.velocity.resize(joint_names_.size(), 0.0);
         frameJointMsgs_.effort.resize(joint_names_.size(), 0.0);
 
+        forceStatePub_ = nh_.advertise<sensor_msgs::JointState>("frame_force_states", 1);
+        eeForceMsgs_.header.stamp = ros::Time::now();
+        eeForceMsgs_.name = forceStateNames;
+
+        eeForceMsgs_.position.resize(forceStateNames.size(), 0.0);
+        eeForceMsgs_.velocity.resize(forceStateNames.size(), 0.0);
+        eeForceMsgs_.effort.resize(forceStateNames.size(), 0.0);
+
         jointStateSub_ = nh_.subscribe(joint_state_topic, 1, &ObserverPub::jointStateCallback, this, ros::TransportHints().tcpNoDelay());
 
         // Get the world name
@@ -165,6 +174,8 @@ namespace dynamics_estimator_ros
         {
             ROS_INFO_STREAM(frames[i].name);
         }
+
+        ROS_INFO_STREAM("==== OBSERVER CREATED ====");
 
     }
 
@@ -192,6 +203,7 @@ namespace dynamics_estimator_ros
             else
             {
                 ROS_WARN_STREAM("Could not find the joint name in the joint state topic!");
+                ROS_WARN_STREAM(joint_names_[i]);
             }
         }
     }
@@ -199,29 +211,40 @@ namespace dynamics_estimator_ros
     void ObserverPub::jointStateCallback(const sensor_msgs::JointState::ConstPtr &msg)
     {
         for (size_t i = 0; i < joint_names_.size(); ++i)
-        {
+        {           
             q_(i)    = msg->position[joint_index_map_[joint_names_[i]]];
             qdot_(i) = msg->velocity[joint_index_map_[joint_names_[i]]];
             tau_(i)  = msg->effort[joint_index_map_[joint_names_[i]]];
         }
-        
+
         // Check frame still exists
         if (!dynamics_observer_->existFrame(frame_name_parameter_))
         {
             ROS_WARN_STREAM(" TARGET FRAME DOES NOT EXIST: " << frame_name_parameter_);
         }
-        
+
+       
         // Update the frame pose
         framePose_ = dynamics_observer_->findFramePose(q_,
                                                        qdot_,
                                                        odom_frame_name_,
                                                        frame_name_parameter_);
+
         
         // Update the frame vel
         frameVel_ = dynamics_observer_->computeFrameVelocity(q_, 
                                                              qdot_,
                                                              frame_name_parameter_,
                                                              pinocchio::ReferenceFrame::WORLD);
+
+
+        // Cacluate the end effector force
+        force_ = dynamics_observer_->computeFrameJacobian(q_, 
+                                                          qdot_,
+                                                          frame_name_parameter_,
+                                                          pinocchio::ReferenceFrame::WORLD).transpose().block(0, 0, 6, q_.rows()) * tau_;
+
+
         publish();
     }
 
@@ -234,14 +257,19 @@ namespace dynamics_estimator_ros
         {
             frameJointMsgs_.position[i] = q_(i);
             frameJointMsgs_.velocity[i] = qdot_(i);
-            // frameJointMsgs_.effort[i] = tau_(i);
+            frameJointMsgs_.effort[i] = tau_(i);
+        }
+
+        eeForceMsgs_.header.stamp = time_;
+        for (size_t i=0; i<forceStateNames.size(); ++i)
+        {
+            eeForceMsgs_.effort[i] = force_(i);
         }
         
         framePoseStamped_.header.stamp = time_;
 
         framePosition_ = framePose_.translation();
         frameQuat_ = Eigen::Quaterniond(framePose_.rotation());
-
 
         framePoseStamped_.pose.position.x = framePosition_(0);
         framePoseStamped_.pose.position.y = framePosition_(1);
@@ -252,7 +280,6 @@ namespace dynamics_estimator_ros
         framePoseStamped_.pose.orientation.y = frameQuat_.y();
         framePoseStamped_.pose.orientation.z = frameQuat_.z();
 
-
         frameTwistStamped_.header.stamp = time_;
         frameTwistStamped_.twist.linear.x = frameVel_[0];
         frameTwistStamped_.twist.linear.y = frameVel_[1];
@@ -261,9 +288,11 @@ namespace dynamics_estimator_ros
         frameTwistStamped_.twist.angular.y = frameVel_[4];
         frameTwistStamped_.twist.angular.z = frameVel_[5];
 
+        // Publish msgs
         framePosePub_.publish(framePoseStamped_);
         frameTwistPub_.publish(frameTwistStamped_);
         jointStatePub_.publish(frameJointMsgs_);
+        forceStatePub_.publish(eeForceMsgs_);
     }
 
     

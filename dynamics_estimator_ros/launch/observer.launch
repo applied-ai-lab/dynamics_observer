@@ -6,7 +6,7 @@
   <!-- Load controller configuration -->
   <rosparam file="$(find dynamics_estimator_ros)/config/dynamics_estimator.yaml" command="load" subst_value="true"/>
 
-  <node name="twist_estimator" pkg="dynamics_estimator_ros" type="dynamics_estimator_ros_twist_node" respawn="false" output="screen" />
+  <node name="observer" pkg="dynamics_estimator_ros" type="dynamics_estimator_ros_twist_node" respawn="false" output="screen" />
 
 
 </launch>

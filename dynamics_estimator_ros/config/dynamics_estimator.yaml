@@ -3,11 +3,11 @@ joints: [$(arg namespace)joint_1, $(arg namespace)joint_2, $(arg namespace)joint
          $(arg namespace)joint_4, $(arg namespace)joint_5, $(arg namespace)joint_6, 
          $(arg namespace)joint_7]
 
-odom_frame: "base_link"
+odom_frame: "dual_gen3_base_link"
 frame_name: "target_frame"
-parent_frame_name: "tool_frame"
-joint_states_topic: "my_gen3/joint_states"
-offset_position: [0., 0., 0.08]
+parent_frame_name: "left_kinova_arm_tool_frame"
+joint_states_topic: "left_arm/joint_states"
+offset_position: [0., 0., 0.0]
 # Quaternion w x y z  
 offset_orientation: [1., 0., 0., 0.]
 

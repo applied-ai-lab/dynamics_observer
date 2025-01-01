@@ -1,0 +1,6 @@
+<launch>
+    <arg name="gui" default="true" />
+    <param name="robot_description" command="xacro --inorder  '$(find oxf20_ridgeback_description)/urdf/oxf20_left_arm.urdf.xacro'"/>
+    <param name="use_gui" value="$(arg gui)"/>
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+</launch>

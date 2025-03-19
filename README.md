@@ -1,4 +1,4 @@
-# Dyanmics Observer
+# Dynamics Observer
 
 Author [Alexander Mitchell](https://github.com/mitch722) (2025)
 
